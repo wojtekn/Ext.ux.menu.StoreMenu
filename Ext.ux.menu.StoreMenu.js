@@ -39,42 +39,31 @@ Initial release
 
 /*
    Modified by Joe Kuan - kuan.joe@gmail.com
+   Ported to Ext 4 by Wojciech Naruniec - w.naruniec@gmail.com
 */
 Ext.namespace('Ext.ux.menu');
 
-Ext.ux.menu.StoreMenu = function(config) {
-	Ext.ux.menu.StoreMenu.superclass.constructor.call(this,config);
-	if(!this.store){
-//at least url/proxy or data need to be given in config when initiating this component
-		this.store = new Ext.data.JsonStore({
-			fields: this.fields,
-			root: this.root,
-			baseParams: this.baseParams,
-			idProperty: this.id,
-			proxy: new Ext.data.HttpProxy({
-			           url: this.url,
-				   method: ((!this.method) ? 'POST' : this.method),
-                        })
-			/*proxy:this.proxy,
-			data: this.data*/
-		});
-	}
+Ext.define('Ext.ux.menu.StoreMenu', {
+    extend : 'Ext.menu.Menu',
 
-	// Keep track of what menu items have been added
-	this.storeMenus = [];
+    initComponent : function() {
+        this.initConfig();
 
-        // List of handlers for menu and submenus
-	this.handlerTypes = {};
+        // call parent
+        this.callParent(arguments);
 
-        if (this.itemsOffset === undefined)
-	  this.itemsOffset = 0;
+        // Keep track of what menu items have been added
+        this.storeMenus = [];
 
-	this.on('show', this.onMenuLoad, this);
-	this.store.on('beforeload', this.onBeforeLoad, this);	
-	this.store.on('load', this.onLoad, this);
-};
-								   
-Ext.extend(Ext.ux.menu.StoreMenu, Ext.menu.Menu, {
+        if (this.itemsOffset === undefined) {
+            this.itemsOffset = 0;
+        }
+
+        this.on('render', this.onMenuLoad, this);
+        this.store.on('beforeload', this.onBeforeLoad, this);
+        this.store.on('load', this.onLoad, this);
+    },
+
 	loadingText: Ext.LoadMask.prototype.msg || 'Loading...',
 	loaded:      false,
 
@@ -99,30 +88,25 @@ Ext.extend(Ext.ux.menu.StoreMenu, Ext.menu.Menu, {
                 this.storeMenus = [];
 
 //to sync the height of the shadow
-		  this.el.sync();	
+        // doesn't work in ext 4
+		//this.el.sync();	
 
 		if (loadedState) {
 			for(var i=0, len=records.length; i<len; i++){
 //create a real function if a handler or menu is given as a string (because a function cannot really be encoded in JSON
-				if (records[i].json.handler) {
-					eval("records[i].json.handler = "+records[i].json.handler);
-//					records[i].json.handler = new Function(records[i].json.handler);
+				if (records[i].data.handler) {
+					eval("records[i].data.handler = "+records[i].data.handler);
+//					records[i].data.handler = new Function(records[i].data.handler);
 				} else if (this.itemsHandler) {
-                                  records[i].json.handler = this.itemsHandler;
+                                  records[i].data.handler = this.itemsHandler;
 				}
 
-				if (records[i].json.menu && records[i].json.menu.items) {
-					//eval("records[i].json.menu = "+records[i].json.menu);
-//					records[i].json.menu = new Function(records[i].json.menu);
-                                  for (var j = 0; j < records[i].json.menu.items.length; j++) {
-                                     var handlerType = records[i].json.menu.items[j].smHandler;
-				     if (handlerType && this.handlerTypes[handlerType]) {
-                                       records[i].json.menu.items[j].handler = this.handlerTypes[handlerType];
-				     }
-				  }
+				if (records[i].data.menu) {
+					eval("records[i].data.menu = "+records[i].data.menu);
+//					records[i].data.menu = new Function(records[i].data.menu);
 				}
 
-				this.storeMenus.push(this.insert(this.itemsOffset + i, records[i].json));
+				this.storeMenus.push(this.insert(this.itemsOffset + i, records[i].data));
 			}
 //			this.hide();
 			//this.show();
@@ -148,12 +132,8 @@ Ext.extend(Ext.ux.menu.StoreMenu, Ext.menu.Menu, {
 		this.updateMenuItems(true,records);		
 	},
 	
-    setItemsHandler: function(handler) {
-	  this.itemsHandler = handler;
-	},
-
-    setSubMenuHandler: function(handler, handlerType) {
-	  this.handlerTypes[handlerType] = handler;
+        setItemsHandler: function(handler) {
+          this.itemsHandler = handler;
 	},
 
 	setOffset: function(offset) {
